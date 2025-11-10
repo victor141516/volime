@@ -1,6 +1,12 @@
 # Volime
 
-Per-application volume control for Windows using multimedia keyboard keys with a Windows 11-style floating interface.
+<p align="center">
+  <img src="icon.ico" alt="Volime Icon" width="128" height="128">
+</p>
+
+<p align="center">
+  <em>Per-application volume control for Windows using multimedia keyboard keys with a Windows 11-style floating interface.</em>
+</p>
 
 ## Features
 
