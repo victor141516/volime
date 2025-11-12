@@ -5,6 +5,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use windows::core::*;
 use windows::Win32::System::Com::*;
+use windows::Win32::UI::HiDpi::*;
 use windows::Win32::UI::WindowsAndMessaging::*;
 
 mod audio_control;
@@ -18,6 +19,11 @@ use system_tray::{ModifierKey, SystemTray};
 use toast_ui::ToastUI;
 
 fn main() -> Result<()> {
+    // Enable DPI awareness for high-resolution displays
+    unsafe {
+        let _ = SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+    }
+
     println!("Volime - Per-Application Volume Control");
     println!("========================================");
     println!("Usage:");
