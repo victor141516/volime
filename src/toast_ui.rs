@@ -7,8 +7,8 @@ use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::Shell::*;
 use windows::Win32::UI::WindowsAndMessaging::*;
 
-const TOAST_WIDTH: i32 = 300;
-const TOAST_HEIGHT: i32 = 100;
+const TOAST_WIDTH: i32 = 200;
+const TOAST_HEIGHT: i32 = 48;
 const HIDE_DELAY_MS: u64 = 2500;
 
 pub struct ToastUI {
@@ -45,11 +45,11 @@ impl ToastUI {
                 return Err(Error::from_win32());
             }
 
-            // Crear ventana en esquina inferior derecha
+            // Crear ventana centrada en la parte inferior
             let screen_width = GetSystemMetrics(SM_CXSCREEN);
             let screen_height = GetSystemMetrics(SM_CYSCREEN);
-            let x = screen_width - TOAST_WIDTH - 20;
-            let y = screen_height - TOAST_HEIGHT - 60;
+            let x = (screen_width - TOAST_WIDTH) / 2;
+            let y = screen_height - TOAST_HEIGHT - 100;
 
             let hwnd = CreateWindowExW(
                 WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
@@ -177,52 +177,35 @@ impl ToastUI {
         if !hdc.is_invalid() {
             let state = state.lock().unwrap();
 
-            // Fondo con esquinas redondeadas
+            // Fondo con esquinas completamente redondeadas
             let brush = CreateSolidBrush(COLORREF(0x00202020));
             let pen = CreatePen(PS_SOLID, 1, COLORREF(0x00404040));
             let old_brush = SelectObject(hdc, brush);
             let old_pen = SelectObject(hdc, pen);
 
-            let _ = RoundRect(hdc, 0, 0, TOAST_WIDTH, TOAST_HEIGHT, 15, 15);
+            // Esquinas ligeramente redondeadas
+            let _ = RoundRect(hdc, 0, 0, TOAST_WIDTH, TOAST_HEIGHT, 12, 12);
 
             SelectObject(hdc, old_brush);
             SelectObject(hdc, old_pen);
             let _ = DeleteObject(brush);
             let _ = DeleteObject(pen);
 
-            // Dibujar icono si existe
+            // Dibujar icono centrado verticalmente a la izquierda
             if let Some(icon) = state.icon {
-                let _ = DrawIconEx(hdc, 15, 15, icon, 32, 32, 0, None, DI_NORMAL);
+                let icon_y = (TOAST_HEIGHT - 24) / 2;
+                let _ = DrawIconEx(hdc, 10, icon_y, icon, 24, 24, 0, None, DI_NORMAL);
             }
 
             // Configurar texto
             SetBkMode(hdc, TRANSPARENT);
             SetTextColor(hdc, COLORREF(0x00FFFFFF));
 
-            // Dibujar nombre de la app
-            let mut app_name: Vec<u16> = state
-                .app_name
-                .encode_utf16()
-                .chain(std::iter::once(0))
-                .collect();
-            let mut rect = RECT {
-                left: 55,
-                top: 15,
-                right: TOAST_WIDTH - 10,
-                bottom: 35,
-            };
-            DrawTextW(
-                hdc,
-                &mut app_name,
-                &mut rect,
-                DT_LEFT | DT_SINGLELINE | DT_VCENTER,
-            );
-
-            // Dibujar barra de volumen
-            let bar_x = 55;
-            let bar_y = 50;
-            let bar_width = TOAST_WIDTH - 65;
-            let bar_height = 10;
+            // Dibujar barra de volumen en el centro
+            let bar_x = 45;
+            let bar_y = (TOAST_HEIGHT - 4) / 2;
+            let bar_width = TOAST_WIDTH - 85;
+            let bar_height = 4;
 
             // Fondo de la barra
             let bg_brush = CreateSolidBrush(COLORREF(0x00404040));
@@ -238,7 +221,7 @@ impl ToastUI {
             // Barra de progreso
             if !state.is_muted {
                 let fill_width = (bar_width as f32 * state.volume) as i32;
-                let fill_brush = CreateSolidBrush(COLORREF(0x000078D4)); // Azul Windows
+                let fill_brush = CreateSolidBrush(COLORREF(0x00FFCE4E)); // Azul Windows
                 let fill_rect = RECT {
                     left: bar_x,
                     top: bar_y,
@@ -249,27 +232,27 @@ impl ToastUI {
                 let _ = DeleteObject(fill_brush);
             }
 
-            // Percentage text
+            // Texto de volumen a la derecha de la barra, sin símbolo %
             let volume_text = if state.is_muted {
-                "Muted".to_string()
+                "M".to_string()
             } else {
-                format!("{}%", (state.volume * 100.0) as i32)
+                format!("{}", (state.volume * 100.0) as i32)
             };
             let mut volume_text_wide: Vec<u16> = volume_text
                 .encode_utf16()
                 .chain(std::iter::once(0))
                 .collect();
             let mut volume_rect = RECT {
-                left: bar_x,
-                top: bar_y + bar_height + 5,
-                right: bar_x + bar_width,
-                bottom: bar_y + bar_height + 25,
+                left: bar_x + bar_width + 5,
+                top: bar_y - 8,
+                right: TOAST_WIDTH - 5,
+                bottom: bar_y + 12,
             };
             DrawTextW(
                 hdc,
                 &mut volume_text_wide,
                 &mut volume_rect,
-                DT_LEFT | DT_SINGLELINE,
+                DT_LEFT | DT_SINGLELINE | DT_VCENTER,
             );
 
             let _ = EndPaint(hwnd, &ps);
